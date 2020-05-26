@@ -1,0 +1,53 @@
+version: '2.1'
+services: 
+    
+    data:
+        container_name: flask_data
+        image: mysql:5.7
+        volumes:
+          - ./data:/var/lib/mysql
+        command: "true"
+    
+    database:
+        container_name: mysql2
+        image: mysql:5.7
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: mydb
+            MYSQL_USER: user
+            MYSQL_PASSWORD: pass
+        ports:
+            - 42334:3306
+        security_opt:
+            - seccomp:unconfined
+        healthcheck:
+            test: "mysql --user=user --password=pass --execute \"SHOW DATABASES;\""
+            timeout: 20s
+            retries: 20
+        volumes_from:
+            - data
+
+    web:
+        container_name: flask_app
+        build: .
+        depends_on:
+            database:
+              condition: service_healthy
+        env_file: .env
+        links: 
+        - database
+        ports:
+        - 5000:5000
+        volumes:
+        - .:/code
+    
+    # nginx:
+    #     container_name: flask_ngnix
+    #     restart: always
+    #     build: ./source/nginx
+    #     ports:
+    #         - "5005:80"
+    #     links:
+    #         - web:web
+
